@@ -15,6 +15,7 @@
   --accent: #c97a00;
   --accent-ink: #1a1100;
   --accent-soft: #fbeccf;
+  --danger: #b3261e;
   --field: #f6f8fa;
   --font-display: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
   --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -22,20 +23,20 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #0e151c; --surface: #16202a; --ink: #e5ecf2; --muted: #93a4b4; --line: #26343f;
-    --accent: #f2a93b; --accent-ink: #1a1100; --accent-soft: #3a2c10; --field: #0f1820;
+    --accent: #f2a93b; --accent-ink: #1a1100; --accent-soft: #3a2c10; --field: #0f1820; --danger: #ff8a80;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0e151c; --surface: #16202a; --ink: #e5ecf2; --muted: #93a4b4; --line: #26343f;
-  --accent: #f2a93b; --accent-ink: #1a1100; --accent-soft: #3a2c10; --field: #0f1820;
+  --accent: #f2a93b; --accent-ink: #1a1100; --accent-soft: #3a2c10; --field: #0f1820; --danger: #ff8a80;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body {
   background: var(--bg); color: var(--ink);
   font-family: var(--font-display); font-size: 16px; line-height: 1.5;
-  padding-block: 28px 56px;
+  padding-block: 28px 120px;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
@@ -110,6 +111,30 @@ button.ghost:hover { color: var(--ink); text-decoration: underline; }
 .brand-text { flex: 1 1 260px; min-width: 0; }
 .logo { height: 96px; width: auto; max-width: 100%; background: #ffffff; border-radius: 10px; padding: 6px 10px; border: 1px solid var(--line); }
 @media (max-width: 420px) { .logo { height: 80px; } }
+
+/* floating list of added appliances, bottom right */
+.dock { position: fixed; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; max-width: calc(100vw - 32px); }
+.dock-toggle { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); border-radius: 999px; padding: 11px 18px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; text-align: left; }
+.dock-toggle:hover { border-color: var(--accent); filter: brightness(1.06); }
+.dock-toggle small { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 0.8rem; }
+.dock-panel { width: min(340px, calc(100vw - 32px)); max-height: min(60vh, 460px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: 0 10px 30px rgba(0,0,0,0.28); }
+.dock-panel h3 { margin: 0 0 10px; font-size: 1rem; }
+.dlist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.di { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; border-top: 1px solid var(--line); padding-top: 8px; }
+.di:first-child { border-top: 0; padding-top: 0; }
+.dname { display: block; overflow-wrap: anywhere; font-weight: 600; }
+.dcost { display: block; font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: 0.8rem; color: var(--muted); }
+.dctl { display: flex; align-items: center; gap: 6px; }
+.dctl .qn { font-family: var(--font-data); font-variant-numeric: tabular-nums; min-width: 1.6em; text-align: center; }
+.qbtn { width: 36px; height: 36px; padding: 0; font-size: 1.2rem; line-height: 1; border-radius: 50%; }
+.qbtn.minus { color: var(--danger); border-color: var(--danger); }
+.rm { display: inline-flex; align-items: center; gap: 6px; color: var(--danger); border-color: var(--danger); background: transparent; padding: 7px 12px; font-size: 0.9rem; }
+.rm span { font-size: 1.2rem; line-height: 1; }
+.rm:hover { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+@media (prefers-reduced-motion: no-preference) {
+  .dock-toggle.pulse { animation: dockpulse 0.45s ease; }
+  @keyframes dockpulse { 40% { transform: scale(1.07); } }
+}
 </style>
 
 <div class="wrap">
@@ -165,6 +190,17 @@ button.ghost:hover { color: var(--ink); text-decoration: underline; }
   <p class="note">This is an estimate. Appliances like fridges and air conditioners switch on and off, so enter the hours they really run. Monthly figures assume 30 days. kWh = watts × hours × quantity ÷ 1000.</p>
 </div>
 
+<aside class="dock" id="dock" hidden aria-label="Your appliances">
+  <div class="dock-panel" id="dockPanel" hidden>
+    <h3>Your appliances</h3>
+    <ul class="dlist" id="dockList"></ul>
+  </div>
+  <button class="dock-toggle" id="dockToggle" type="button" aria-expanded="false" aria-controls="dockPanel">
+    <span id="dockCount">0 appliances</span>
+    <small id="dockCost">0.00</small>
+  </button>
+</aside>
+
 <script>
 (function () {
   var PRESETS = [
@@ -212,7 +248,7 @@ button.ghost:hover { color: var(--ink); text-decoration: underline; }
       '<div class="field watts"><label for="w' + id + '">Watts</label>' +
       '<input id="w' + id + '" type="number" inputmode="decimal" min="0" step="any"></div>' +
       '<div class="foot"><span class="calc"><b data-k="kwh">0.00</b> kWh &middot; <b data-k="cost">0.00</b> a month</span>' +
-      '<button class="ghost" type="button" data-rm>Remove</button></div>';
+      '<button class="rm" type="button" data-rm aria-label="Remove this appliance"><span aria-hidden="true">&minus;</span> Remove</button></div>';
     li.querySelector("#n" + id).value = d.n || "";
     li.querySelector("#h" + id).value = d.h == null ? "" : d.h;
     li.querySelector("#q" + id).value = d.q == null ? 1 : d.q;
@@ -228,11 +264,60 @@ button.ghost:hover { color: var(--ink); text-decoration: underline; }
         recalc();
       });
     });
-    li.querySelector("[data-rm]").addEventListener("click", function () {
-      rows = rows.filter(function (x) { return x !== r; });
-      li.remove(); recalc();
-    });
+    li.querySelector("[data-rm]").addEventListener("click", function () { removeRow(r); });
     return r;
+  }
+
+  function removeRow(r) {
+    rows = rows.filter(function (x) { return x !== r; });
+    r.el.remove();
+    recalc();
+  }
+
+  function changeQty(r, d) {
+    var inp = r.el.querySelector("#q" + r.id);
+    var q = Math.max(0, Math.round(val(inp)) + d);
+    if (q <= 0 && d < 0) { removeRow(r); return; }
+    inp.value = q;
+    recalc();
+  }
+
+  function pulse() {
+    var t = $("dockToggle");
+    t.classList.remove("pulse");
+    void t.offsetWidth;
+    t.classList.add("pulse");
+  }
+
+  function renderDock(total, rate) {
+    $("dock").hidden = rows.length === 0;
+    $("dockCount").textContent = rows.length + (rows.length === 1 ? " appliance" : " appliances");
+    $("dockCost").textContent = money(total * rate) + " a month";
+    var ul = $("dockList");
+    ul.textContent = "";
+    rows.forEach(function (r) {
+      var g = function (p) { return r.el.querySelector("#" + p + r.id); };
+      var name = g("n").value.trim() || "Unnamed appliance";
+      var kwh = val(g("w")) * val(g("q")) * Math.min(val(g("h")), 24) * 30 / 1000;
+      var li = document.createElement("li"); li.className = "di";
+      var info = document.createElement("div");
+      var nm = document.createElement("span"); nm.className = "dname"; nm.textContent = name;
+      var cs = document.createElement("span"); cs.className = "dcost"; cs.textContent = money(kwh * rate) + " a month";
+      info.appendChild(nm); info.appendChild(cs);
+      var ctl = document.createElement("div"); ctl.className = "dctl";
+      var minus = document.createElement("button");
+      minus.type = "button"; minus.className = "qbtn minus"; minus.innerHTML = "&minus;";
+      minus.setAttribute("aria-label", "Remove one " + name);
+      minus.addEventListener("click", function () { changeQty(r, -1); });
+      var qn = document.createElement("span"); qn.className = "qn"; qn.textContent = Math.round(val(g("q")));
+      var plus = document.createElement("button");
+      plus.type = "button"; plus.className = "qbtn"; plus.textContent = "+";
+      plus.setAttribute("aria-label", "Add one " + name);
+      plus.addEventListener("click", function () { changeQty(r, 1); });
+      ctl.appendChild(minus); ctl.appendChild(qn); ctl.appendChild(plus);
+      li.appendChild(info); li.appendChild(ctl);
+      ul.appendChild(li);
+    });
   }
 
   function recalc() {
@@ -252,6 +337,7 @@ button.ghost:hover { color: var(--ink); text-decoration: underline; }
     $("empty").hidden = rows.length > 0;
     $("clearAll").hidden = rows.length === 0;
     renderBars(items, total, rate);
+    renderDock(total, rate);
   }
 
   function renderBars(items, total, rate) {
@@ -292,7 +378,7 @@ button.ghost:hover { color: var(--ink); text-decoration: underline; }
       } else {
         addRow({ n: p.n, w: p.w, h: p.h, q: 1, key: p.n });
       }
-      edited(); recalc();
+      edited(); recalc(); pulse();
     });
     chips.appendChild(b);
   });
@@ -306,6 +392,12 @@ button.ghost:hover { color: var(--ink); text-decoration: underline; }
   chips.appendChild(other);
 
   $("rate").addEventListener("input", recalc);
+  $("dockToggle").addEventListener("click", function () {
+    var panel = $("dockPanel");
+    var open = panel.hidden;
+    panel.hidden = !open;
+    this.setAttribute("aria-expanded", String(open));
+  });
   list.addEventListener("input", edited);
   $("clearAll").addEventListener("click", function () {
     rows = []; list.textContent = ""; edited(); recalc();
